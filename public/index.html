@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Auto-Chat Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #0f1015;
+            --bg-card: #181920;
+            --bg-input: #21232d;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --accent: #8b5cf6;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --success: #10b981;
+            --danger: #ef4444;
+            --border: #2e303e;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background: var(--bg-deep); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; background-image: radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.15) 0%, transparent 40%); }
+        
+        .dashboard-container { width: 100%; max-width: 750px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); overflow: hidden; backdrop-filter: blur(10px); }
+        
+        .header { background: linear-gradient(135deg, var(--primary), var(--accent)); padding: 25px 30px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 1.5rem; font-weight: 700; color: white; display: flex; align-items: center; gap: 10px; }
+        .bot-status { background: rgba(255,255,255,0.2); padding: 6px 14px; border-radius: 30px; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 6px; color: white; }
+        .status-dot { width: 8px; height: 8px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 8px #22c55e; }
+
+        .content { padding: 30px; display: flex; flex-direction: column; gap: 20px; }
+        
+        .section-group { background: var(--bg-input); border: 1px solid var(--border); border-radius: 14px; padding: 20px; transition: 0.3s; }
+        .section-group:hover { border-color: rgba(99, 102, 241, 0.4); }
+
+        label { display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 8px; color: var(--text-muted); }
+        input, textarea, select { width: 100%; padding: 12px 16px; background: var(--bg-deep); border: 1px solid var(--border); color: white; border-radius: 10px; font-size: 0.95rem; outline: none; transition: 0.2s; }
+        input:focus, textarea:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); }
+
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+
+        .btn { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4); }
+
+        .terminal { background: var(--bg-deep); border: 1px solid var(--border); border-radius: 12px; padding: 15px; font-family: monospace; font-size: 0.85rem; height: 130px; overflow-y: auto; color: #34d399; }
+        .terminal p { margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1>🤖 Discord Auto-Chat</h1>
+            <div class="bot-status">
+                <span class="status-dot"></span> Online Server
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="section-group">
+                <div class="row">
+                    <div>
+                        <label>Mode Pengiriman</label>
+                        <select id="type" onchange="toggleMode()">
+                            <option value="server">Kirim ke Server (Channel ID)</option>
+                            <option value="dm">Kirim ke DM (User ID)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label id="label-target">Channel ID</label>
+                        <input type="text" id="targetId" placeholder="Masukkan ID...">
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-group">
+                <label>Pesan Otomatis</label>
+                <textarea id="message" rows="3" placeholder="Tulis pesan otomatis di sini..."></textarea>
+            </div>
+
+            <button class="btn" onclick="sendMessage()">Kirim Pesan Sekarang</button>
+
+            <div class="section-group">
+                <label>Live Terminal Log</label>
+                <div class="terminal" id="terminalLog">
+                    <p>> Sistem siap. Menunggu perintah...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleMode() {
+            const type = document.getElementById('type').value;
+            const label = document.getElementById('label-target');
+            const input = document.getElementById('targetId');
+            if (type === 'server') {
+                label.innerText = 'Channel ID';
+                input.placeholder = 'Masukkan Channel ID...';
+            } else {
+                label.innerText = 'User ID';
+                input.placeholder = 'Masukkan User ID...';
+            }
+        }
+
+        async function sendMessage() {
+            const type = document.getElementById('type').value;
+            const targetId = document.getElementById('targetId').value;
+            const message = document.getElementById('message').value;
+            const terminal = document.getElementById('terminalLog');
+
+            if (!targetId || !message) {
+                terminal.innerHTML += `<p style="color: #ef4444;">> Error: ID Target dan Pesan wajib diisi!</p>`;
+                return;
+            }
+
+            const endpoint = type === 'server' ? '/api/send-server' : '/api/send-dm';
+            const bodyData = type === 'server' ? { channelId: targetId, message } : { userId: targetId, message };
+
+            terminal.innerHTML += `<p>> Mengirim pesan ke ${targetId}...</p>`;
+            terminal.scrollTop = terminal.scrollHeight;
+
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(bodyData)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    terminal.innerHTML += `<p style="color: #10b981;">> Sukses: ${data.message}</p>`;
+                } else {
+                    terminal.innerHTML += `<p style="color: #ef4444;">> Gagal: ${data.error}</p>`;
+                }
+            } catch (err) {
+                terminal.innerHTML += `<p style="color: #ef4444;">> Kesalahan koneksi server.</p>`;
+            }
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+    </script>
+</body>
+</html>
